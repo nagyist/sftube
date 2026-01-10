@@ -35,6 +35,13 @@ class PlatformVideoPlayer extends StatelessWidget {
         )
         .toList();
 
+    // Muxed streams (combined video+audio) - fallback when video-only+audio-only unavailable
+    final muxedStreams = (videoData.audioStreams ?? BuiltList.from([]))
+        .where(
+          (p0) => (p0.quality?.startsWith('muxed-') ?? false) && p0.url != null,
+        )
+        .toList();
+
     if (Constants.isMobileOrWeb) {
       return VideoPlayerMobile(
         defaultQuality: 360,
@@ -51,8 +58,47 @@ class PlatformVideoPlayer extends StatelessWidget {
             .toList(),
       );
     } else {
-      // Handle case where no streams are available
-      if (videoonlyStreams.isEmpty) {
+      // Check if we have video-only + audio-only streams
+      final hasVideoOnly = videoonlyStreams.isNotEmpty;
+      final hasAudioOnly = audioonlyStreams.isNotEmpty;
+      
+      // Use muxed stream as fallback if video-only or audio-only is missing
+      if (hasVideoOnly && hasAudioOnly) {
+        // Use video-only + audio-only for best quality
+        return VideoPlayerMpv(
+          isCinemaMode: isCinemaMode,
+          url: videoonlyStreams.first.url.toString(),
+          audstreams: audioonlyStreams.asMap().map(
+                (key, value) => MapEntry(
+                  value.bitrate!,
+                  value.url.toString(),
+                ),
+              ),
+          resolutions: videoonlyStreams.asMap().map(
+                (key, value) => MapEntry(
+                  value.quality!,
+                  value.url.toString(),
+                ),
+              ),
+          handw: videoonlyStreams.asMap().map(
+                (key, value) => MapEntry(
+                  value.width!,
+                  value.height!,
+                ),
+              ),
+        );
+      } else if (muxedStreams.isNotEmpty) {
+        // Fall back to muxed stream (combined video+audio)
+        final muxed = muxedStreams.first;
+        return VideoPlayerMpv(
+          isCinemaMode: isCinemaMode,
+          url: muxed.url.toString(),
+          audstreams: {},
+          resolutions: {muxed.quality!: muxed.url.toString()},
+          handw: {(muxed.height ?? 360): (muxed.width ?? 640)},
+        );
+      } else {
+        // No playable streams available
         return Center(
           child: Text(
             'No playable video streams available',
@@ -60,38 +106,6 @@ class PlatformVideoPlayer extends StatelessWidget {
           ),
         );
       }
-      
-      if (audioonlyStreams.isEmpty) {
-        return Center(
-          child: Text(
-            'No audio streams available',
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        );
-      }
-      
-      return VideoPlayerMpv(
-        isCinemaMode: isCinemaMode,
-        url: videoonlyStreams.first.url.toString(),
-        audstreams: audioonlyStreams.asMap().map(
-              (key, value) => MapEntry(
-                value.bitrate!,
-                value.url.toString(),
-              ),
-            ),
-        resolutions: videoonlyStreams.asMap().map(
-              (key, value) => MapEntry(
-                value.quality!,
-                value.url.toString(),
-              ),
-            ),
-        handw: videoonlyStreams.asMap().map(
-              (key, value) => MapEntry(
-                value.width!,
-                value.height!,
-              ),
-            ),
-      );
     }
   }
 }
