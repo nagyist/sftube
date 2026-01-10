@@ -8,6 +8,7 @@ import 'package:pstube/data/models/comment_data.dart';
 import 'package:pstube/data/models/models.dart';
 import 'package:pstube/foundation/constants.dart';
 import 'package:pstube/foundation/extensions/extensions.dart';
+import 'package:pstube/foundation/services/piped_instances.dart';
 import 'package:pstube/ui/screens/screens.dart';
 import 'package:pstube/ui/widgets/widgets.dart';
 
@@ -31,7 +32,7 @@ class CommentBox extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final api = PipedApi().getUnauthenticatedApi();
+    final api = ref.watch(unauthenticatedApiProvider);
     final channelData = useFuture(
       useMemoized(
         () => api.channelInfoId(

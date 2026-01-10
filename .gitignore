@@ -86,3 +86,4 @@ Output/pstube.exe
 # FVM file
 .fvm/
 dist/
+app_locals*.dart

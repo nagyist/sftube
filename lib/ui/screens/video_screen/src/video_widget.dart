@@ -57,7 +57,7 @@ class VideoWidget extends ConsumerWidget {
                   ),
                 ),
                 ColoredBox(
-                  color: Colors.black.withOpacity(0.25),
+                  color: Colors.black.withValues(alpha: 0.25),
                 ),
                 const Align(
                   child: CircularProgressIndicator(),

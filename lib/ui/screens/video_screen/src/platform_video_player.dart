@@ -18,30 +18,31 @@ class PlatformVideoPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final videoStreams = (videoData.videoStreams ?? BuiltList.from([]))
-        .where(
-          (p0) => !(p0.videoOnly ?? false),
-        )
-        .toList();
+    // Get video-only streams (pure video, no audio)
     final videoonlyStreams = (videoData.videoStreams ?? BuiltList.from([]))
         .where(
-          (p0) => !(p0.videoOnly == false),
+          (p0) => (p0.videoOnly ?? false) &&
+              // Filter out streams that contain audio codecs (not true video-only)
+              !(p0.codec?.contains('mp4a') ?? false) &&
+              !(p0.codec?.contains('opus') ?? false),
         )
         .toList();
+    
+    // Audio-only streams (pure audio, no video)
     final audioonlyStreams = (videoData.audioStreams ?? BuiltList.from([]))
         .where(
-          (p0) => p0.codec == 'opus',
+          (p0) => (p0.quality?.isEmpty ?? true) || p0.codec == 'opus',
         )
         .toList();
 
     if (Constants.isMobileOrWeb) {
       return VideoPlayerMobile(
         defaultQuality: 360,
-        resolutions: videoStreams
+        resolutions: videoonlyStreams
             .map(
               (value) => VideoQalityUrls(
                 quality: int.tryParse(
-                      value.quality!.substring(0, value.quality!.length - 1),
+                      value.quality?.substring(0, value.quality!.length - 1) ?? '0',
                     ) ??
                     0,
                 url: value.url.toString(),
@@ -50,9 +51,28 @@ class PlatformVideoPlayer extends StatelessWidget {
             .toList(),
       );
     } else {
+      // Handle case where no streams are available
+      if (videoonlyStreams.isEmpty) {
+        return Center(
+          child: Text(
+            'No playable video streams available',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        );
+      }
+      
+      if (audioonlyStreams.isEmpty) {
+        return Center(
+          child: Text(
+            'No audio streams available',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        );
+      }
+      
       return VideoPlayerMpv(
         isCinemaMode: isCinemaMode,
-        url: videoStreams.last.url.toString(),
+        url: videoonlyStreams.first.url.toString(),
         audstreams: audioonlyStreams.asMap().map(
               (key, value) => MapEntry(
                 value.bitrate!,

@@ -121,7 +121,7 @@ class MyHomePage extends HookConsumerWidget {
     }
 
     return PopScope(
-      onPopInvoked: (_) async {
+      onPopInvokedWithResult: (popDisposition, result) async {
         if (currentIndex.value != 0) {
           controller.jumpToPage(0);
         } else if (toggleSearch.value) {

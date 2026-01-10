@@ -10,9 +10,21 @@ class StreamData {
 
   StreamData.fromStream({
     required Stream stream,
-  })  : quality = stream.quality!,
-        format = stream.format!.getName,
-        url = stream.url!;
+  })  : quality = stream.quality ?? stream.codec?.split(',').first.trim() ?? 'Unknown',
+        format = stream.format?.getName ?? stream.mimeType?.split('/').last ?? 'Unknown',
+        url = stream.url ?? '';
+
+  StreamData copyWith({
+    String? quality,
+    String? format,
+    String? url,
+  }) {
+    return StreamData(
+      quality: quality ?? this.quality,
+      format: format ?? this.format,
+      url: url ?? this.url,
+    );
+  }
 
   final String quality;
   final String format;

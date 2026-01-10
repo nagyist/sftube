@@ -40,7 +40,8 @@ class VideoPopupWrapper extends StatelessWidget {
           child: ColoredBox(
             color: context.theme.canvasColor,
             child: PopScope(
-              onPopInvoked: (_) async => onClose(),
+              onPopInvokedWithResult: (popDisposition, result) async =>
+                  onClose(),
               canPop: false,
               child: isScrollable
                   ? SingleChildScrollView(

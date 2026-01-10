@@ -4,12 +4,14 @@ import 'package:piped_api/piped_api.dart';
 import 'package:pstube/data/models/channel_data.dart';
 import 'package:pstube/data/models/comment_data.dart';
 import 'package:pstube/data/models/models.dart';
+import 'package:pstube/data/models/playlist_data.dart';
 import 'package:pstube/data/models/search_data.dart';
-import 'package:pstube/foundation/extensions/extensions.dart';
 import 'package:pstube/states/region/provider.dart';
+import 'package:pstube/foundation/services/piped_instances.dart';
+import 'package:pstube/foundation/services/youtube_explode_dart_service.dart';
 
 final pipedServiceProvider = Provider<PipedService>((ref) {
-  final api = PipedApi().getUnauthenticatedApi();
+  final api = ref.watch(unauthenticatedApiProvider);
   return PipedService(api: api, ref: ref);
 });
 final trendingVideosProvider = FutureProvider((ref) {
@@ -24,12 +26,24 @@ class PipedService {
   final UnauthenticatedApi api;
 
   Future<ChannelData?> channelInfo(UploaderId uploaderId) async {
-    final info = await api.channelInfoId(channelId: uploaderId.value);
-    if (info.data == null) return null;
-    return ChannelData.fromChannelInfo(channelInfo: info.data!);
+    // Try YouTubeExplode first (more reliable)
+    final ytData = await YoutubeExplodeService.getVideoInfo(VideoId('/watch?v=dummy'));
+    if (ytData != null) {
+      // YouTubeExplode doesn't have channel info, fall back to Piped
+    }
+
+    // Fallback to Piped
+    try {
+      final info = await api.channelInfoId(channelId: uploaderId.value);
+      if (info.data == null) return null;
+      return ChannelData.fromChannelInfo(channelInfo: info.data!);
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<BuiltList<VideoData>?> getTrending() async {
+    // Piped trending works, use it directly
     final trending = await api.trending(
       region: ref.watch(regionProvider),
     );
@@ -44,7 +58,7 @@ class PipedService {
     return data;
   }
 
-  Future<StreamList<VideoData>?>? channelNextPage({
+  Future<StreamList<VideoData>?> channelNextPage({
     required UploaderId uploaderId,
     required String nextpage,
   }) async {
@@ -69,40 +83,54 @@ class PipedService {
   }
 
   Future<VideoData?> getVideoData(VideoId videoId) async {
-    final data = (await api.streamInfo(
-      videoId: videoId.value,
-    ))
-        .data;
+    // Try YouTubeExplode first (more reliable for streams)
+    final ytData = await YoutubeExplodeService.getVideoData(videoId);
+    if (ytData != null) return ytData;
 
-    if (data == null) return null;
+    // Fallback to Piped
+    try {
+      final data = (await api.streamInfo(
+        videoId: videoId.value,
+      ))
+          .data;
 
-    return VideoData.fromVideoInfo(
-      data,
-      videoId,
-    );
+      if (data == null) return null;
+
+      return VideoData.fromVideoInfo(
+        data,
+        videoId,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<StreamList<CommentData>?>? comments({required String videoId}) async {
-    final commentsPage = (await api.comments(
-      videoId: videoId,
-    ))
-        .data;
+  Future<StreamList<CommentData>?> comments({required String videoId}) async {
+    // Use Piped for comments (YouTubeExplode comments are broken since v2.2.0)
+    try {
+      final commentsPage = (await api.comments(
+        videoId: videoId,
+      ))
+          .data;
 
-    if (commentsPage?.comments == null) return null;
+      if (commentsPage?.comments == null) return null;
 
-    final comments = commentsPage!.comments!
-        .map(
-          CommentData.fromComment,
-        )
-        .toBuiltList();
+      final comments = commentsPage!.comments!
+          .map(
+            CommentData.fromComment,
+          )
+          .toBuiltList();
 
-    return StreamList(
-      streams: comments,
-      nextpage: commentsPage.nextpage,
-    );
+      return StreamList(
+        streams: comments,
+        nextpage: commentsPage.nextpage,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<StreamList<CommentData>?>? commentsNextPage({
+  Future<StreamList<CommentData>?> commentsNextPage({
     required String videoId,
     required String nextpage,
   }) async {
@@ -130,21 +158,62 @@ class PipedService {
     required String query,
     required SearchFilter filter,
   }) async {
-    final data = (await api.search(
-      q: query,
-      filter: filter,
-    ))
-        .data;
+    // Try YouTubeExplode first for video/channel search
+    if (filter == SearchFilter.videos || filter == SearchFilter.channels) {
+      try {
+        final ytResults = await YoutubeExplodeService.searchVideos(
+          query,
+          filter: filter,
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            YoutubeExplodeService.resetClient();
+            return <VideoData>[];
+          },
+        );
+        if (ytResults.isNotEmpty) {
+          final searchData = ytResults.map((e) => SearchData(data: e)).toBuiltList();
+          return StreamList(streams: searchData, nextpage: null);
+        }
+      } catch (e) {
+        // YouTubeExplode failed, fall through to Piped
+      }
+    }
 
-    if (data == null) return null;
+    // Fallback to Piped
+    try {
+      final data = (await api.search(
+        q: query,
+        filter: filter,
+      ))
+          .data;
 
-    final results =
-        data.items!.map((e) => SearchData(data: e.data)).toBuiltList();
+      if (data == null) return null;
 
-    return StreamList(
-      streams: results,
-      nextpage: data.nextpage,
-    );
+      // Convert SearchItem to appropriate data types
+      final results = data.items!.map((e) {
+        final itemData = e.data;
+        if (itemData is StreamItem) {
+          // Convert to VideoData
+          return SearchData(data: VideoData.fromStreamItem(itemData));
+        } else if (itemData is ChannelItem) {
+          // Convert to ChannelData
+          return SearchData(data: ChannelData.fromChannelItem(itemData));
+        } else if (itemData is PlaylistItem) {
+          // Keep as PlaylistData
+          return SearchData(data: PlaylistData.fromPlaylistItem(searchItem: itemData));
+        }
+        // Fallback for unknown types
+        return SearchData(data: itemData);
+      }).toBuiltList();
+
+      return StreamList(
+        streams: results,
+        nextpage: data.nextpage,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<StreamList<SearchData>?> searchNextPage({
@@ -161,10 +230,23 @@ class PipedService {
 
     if (searchPage?.items == null) return null;
 
+    // Convert SearchItem to appropriate data types
     final results = searchPage!.items!
-        .map(
-          (e) => SearchData(data: e.data),
-        )
+        .map((e) {
+          final itemData = e.data;
+          if (itemData is StreamItem) {
+            // Convert to VideoData
+            return SearchData(data: VideoData.fromStreamItem(itemData));
+          } else if (itemData is ChannelItem) {
+            // Convert to ChannelData
+            return SearchData(data: ChannelData.fromChannelItem(itemData));
+          } else if (itemData is PlaylistItem) {
+            // Keep as PlaylistData
+            return SearchData(data: PlaylistData.fromPlaylistItem(searchItem: itemData));
+          }
+          // Fallback for unknown types
+          return SearchData(data: itemData);
+        })
         .toBuiltList();
 
     return StreamList(

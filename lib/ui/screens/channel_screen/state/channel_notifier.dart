@@ -29,6 +29,12 @@ class ChannelNotifierProvider extends ChangeNotifier {
   StreamList<VideoData>? _videosList;
   BuiltList<VideoData>? get videos => _videosList?.streams;
 
+  @override
+  void dispose() {
+    yt.close();
+    super.dispose();
+  }
+
   Future<void> loadChannelData(String channelId) async {
     channelData = null;
 
@@ -40,7 +46,13 @@ class ChannelNotifierProvider extends ChangeNotifier {
   }
 
   Future<void> loadAboutPage(String channelId) async {
-    channelInfo = await yt.channels.getAboutPage(channelId);
+    try {
+      // Note: YouTubeExplode's getAboutPage may fail for some channels
+      channelInfo = await yt.channels.getAboutPage(channelId);
+    } catch (e) {
+      // Fallback to null if about page fails
+      channelInfo = null;
+    }
     notifyListeners();
   }
 

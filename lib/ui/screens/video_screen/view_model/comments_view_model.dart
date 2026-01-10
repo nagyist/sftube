@@ -44,9 +44,9 @@ class CommentsNotifierProvider extends ChangeNotifier {
   Future<void> getComments(String videoId) async {
     isLoading = true;
     _commentsList = null;
-    if (!isLoading) {
-      notifyListeners();
-    }
+    // Delay notification to avoid modifying provider during widget build
+    Future(() => notifyListeners());
+
     final page = await api.comments(
       videoId: videoId,
     );
@@ -55,14 +55,14 @@ class CommentsNotifierProvider extends ChangeNotifier {
 
     _commentsList = page;
     isLoading = false;
-    notifyListeners();
+    Future(() => notifyListeners());
   }
 
   Future<void> commentsNextPage(String videoId) async {
     if (!(_commentsList?.hasNextpage ?? true) || isLoading) return;
 
     isLoading = true;
-    notifyListeners();
+    Future(() => notifyListeners());
 
     final nextPage = await api.commentsNextPage(
       nextpage: _commentsList!.nextpage!,
@@ -75,17 +75,17 @@ class CommentsNotifierProvider extends ChangeNotifier {
 
     _commentsList = _commentsList!.rebuild(nextPage!.streams);
     isLoading = false;
-    notifyListeners();
+    Future(() => notifyListeners());
   }
 
   Future<void> getReplies(String videoId) async {
     isLoadingReplies = true;
     _repliesList = null;
-    notifyListeners();
+    Future(() => notifyListeners());
 
     if (replyComment?.nextpage == null) {
       isLoadingReplies = false;
-      notifyListeners();
+      Future(() => notifyListeners());
     }
 
     final page = await api.commentsNextPage(
@@ -97,7 +97,7 @@ class CommentsNotifierProvider extends ChangeNotifier {
 
     _repliesList = page;
     isLoadingReplies = false;
-    notifyListeners();
+    Future(() => notifyListeners());
   }
 
   Future<void> repliesNextPage(String videoId) async {
@@ -106,7 +106,7 @@ class CommentsNotifierProvider extends ChangeNotifier {
     }
 
     isLoadingReplies = true;
-    notifyListeners();
+    Future(() => notifyListeners());
 
     final nextPage = await api.commentsNextPage(
       nextpage: _repliesList!.nextpage!,
@@ -119,6 +119,6 @@ class CommentsNotifierProvider extends ChangeNotifier {
 
     _repliesList = _repliesList!.rebuild(nextPage!.streams);
     isLoadingReplies = false;
-    notifyListeners();
+    Future(() => notifyListeners());
   }
 }

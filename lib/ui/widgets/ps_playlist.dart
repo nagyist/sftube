@@ -43,7 +43,7 @@ class PSPlaylist extends ConsumerWidget {
                 Positioned(
                   bottom: 0,
                   child: Container(
-                    color: Colors.grey[800]!.withOpacity(0.8),
+                    color: Colors.grey[800]!.withValues(alpha: 0.8),
                     width: 160,
                     padding: const EdgeInsets.all(5),
                     height: 30,

@@ -1,13 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:libadwaita/libadwaita.dart';
 import 'package:piped_api/piped_api.dart';
 import 'package:pstube/foundation/extensions/extensions.dart';
+import 'package:pstube/foundation/services/piped_instances.dart';
 import 'package:pstube/ui/screens/screens.dart';
 import 'package:pstube/ui/widgets/widgets.dart';
 
-class ChannelDetails extends StatefulHookWidget {
+class ChannelDetails extends HookConsumerWidget {
   const ChannelDetails({
     required this.channelId,
     super.key,
@@ -20,32 +22,23 @@ class ChannelDetails extends StatefulHookWidget {
   final Color? textColor;
 
   @override
-  State<ChannelDetails> createState() => _ChannelInfoState();
-}
-
-class _ChannelInfoState extends State<ChannelDetails>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final size = widget.isOnVideo ? 40 : 60;
-    final api = PipedApi().getUnauthenticatedApi();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final size = isOnVideo ? 40 : 60;
+    final api = ref.watch(unauthenticatedApiProvider);
     final channelData = useFuture<Response<ChannelInfo>>(
       useMemoized(
         () => api.channelInfoId(
-          channelId: widget.channelId,
+          channelId: channelId,
         ),
-        [
-          widget.channelId,
-        ],
+        [channelId],
       ),
     ).data?.data;
 
     return GestureDetector(
-      onTap: widget.isOnVideo && channelData != null
+      onTap: isOnVideo && channelData != null
           ? () => context.pushPage(
                 ChannelScreen(
-                  channelId: widget.channelId,
+                  channelId: channelId,
                 ),
               )
           : null,
@@ -95,7 +88,4 @@ class _ChannelInfoState extends State<ChannelDetails>
       ),
     );
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }

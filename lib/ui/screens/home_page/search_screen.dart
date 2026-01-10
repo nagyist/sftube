@@ -22,13 +22,13 @@ class SearchScreen extends HookConsumerWidget {
     final controller = useScrollController();
 
     Future<void> loadVideos() async {
-      if (context.mounted) return;
+      if (searchedTerm.value.isEmpty) return;
 
       await ref.read(searchProvider.notifier).search(searchedTerm.value);
     }
 
     Future<void> getMoreData() async {
-      if (context.mounted ||
+      if (!context.mounted ||
           controller.position.pixels != controller.position.maxScrollExtent) {
         return;
       }
@@ -53,7 +53,7 @@ class SearchScreen extends HookConsumerWidget {
     return searchP.results != null && !searchP.isLoading
         ? ListView.separated(
             separatorBuilder: (context, index) => Divider(
-              color: context.getBackgroundColor.withOpacity(0.6),
+              color: context.getBackgroundColor.withValues(alpha: 0.6),
             ),
             shrinkWrap: true,
             controller: controller,
@@ -96,7 +96,7 @@ class SearchContentWidget extends StatelessWidget {
         );
 
       case SearchType.playlist:
-        final playlist = searchData as PlaylistData;
+        final playlist = searchData.data as PlaylistData;
         return PSPlaylist(
           playlist: playlist,
         );

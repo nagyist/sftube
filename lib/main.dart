@@ -1,13 +1,13 @@
 import 'package:adwaita/adwaita.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_locals.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pstube/config/info/app_info.dart';
 import 'package:pstube/foundation/configuration.dart';
 import 'package:pstube/foundation/controller/scrollable.dart';
+import 'package:pstube/l10n/app_locals.dart';
 import 'package:pstube/states/states.dart';
 import 'package:pstube/ui/screens/home_page/home_page.dart';
 import 'package:responsive_framework/responsive_framework.dart';

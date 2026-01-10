@@ -9,10 +9,10 @@ extension ColorTint on Color {
     );
     final f = 1 - percent / 100;
     return Color.fromARGB(
-      alpha,
-      (red * f).round(),
-      (green * f).round(),
-      (blue * f).round(),
+      (a * 255).toInt(),
+      (r * f).toInt(),
+      (g * f).toInt(),
+      (b * f).toInt(),
     );
   }
 
@@ -23,10 +23,10 @@ extension ColorTint on Color {
     );
     final p = percent / 100;
     return Color.fromARGB(
-      alpha,
-      red + ((255 - red) * p).round(),
-      green + ((255 - green) * p).round(),
-      blue + ((255 - blue) * p).round(),
+      (a * 255).toInt(),
+      (r + ((255 - r) * p)).toInt(),
+      (g + ((255 - g) * p)).toInt(),
+      (b + ((255 - b) * p)).toInt(),
     );
   }
 

@@ -64,20 +64,15 @@ class _DownloadWrapperState extends ConsumerState<_DownloadWrapper> {
   );
   @override
   Widget build(BuildContext context) {
-    final videoData =
-        widget.videoUrl != null || widget.video?.audioStreams == null
-            ? ref.watch(provider)
-            : null;
+    // Always fetch fresh data to get audioStreams
+    final videoData = ref.watch(provider);
 
-    final loadedVideo =
-        widget.video?.videoStreams != null ? widget.video! : videoData!.value;
-
-    return loadedVideo != null
+    return videoData.value != null
         ? DownloadsWidget(
             isClickable: widget.isClickable,
-            video: loadedVideo,
+            video: videoData.value!,
           )
-        : videoData!.isLoading
+        : videoData.isLoading
             ? _progressIndicator
             : Text(context.locals.error);
   }
@@ -138,10 +133,21 @@ class DownloadsWidget extends ConsumerWidget {
             label: context.locals.videoPlusAudio,
             padding: const EdgeInsets.only(top: 6, bottom: 14),
           ),
-          for (final videoStream in video.videoStreams!
-              .where((p0) => !(p0.videoOnly ?? false))
-              .toList()
-              .reversed)
+          // Muxed streams (combined video+audio from YouTubeExplode)
+          if (video.audioStreams != null)
+            for (final audioStream in video.audioStreams!
+                .where((p0) => p0.url != null && (p0.quality?.startsWith('muxed-') ?? false)))
+            DownloadQualityTile(
+              stream: StreamData.fromStream(stream: audioStream),
+              video: video,
+              onClose: onClose,
+            ),
+          // Video streams with videoOnly=false (from Piped)
+          if (video.videoStreams != null)
+            for (final videoStream in video.videoStreams!
+                .where((p0) => !(p0.videoOnly ?? false) && p0.url != null)
+                .toList()
+                .reversed)
             DownloadQualityTile(
               stream: StreamData.fromStream(stream: videoStream),
               video: video,
@@ -152,7 +158,9 @@ class DownloadsWidget extends ConsumerWidget {
             icon: Icons.audiotrack,
             label: context.locals.audioOnly,
           ),
-          for (final audioStream in video.audioStreams!)
+          if (video.audioStreams != null)
+            for (final audioStream in video.audioStreams!
+                .where((p0) => p0.url != null && (p0.quality?.isEmpty ?? true)))
             DownloadQualityTile(
               stream: StreamData.fromStream(stream: audioStream),
               video: video,
@@ -163,9 +171,15 @@ class DownloadsWidget extends ConsumerWidget {
             icon: Icons.videocam,
             label: context.locals.videoOnly,
           ),
-          for (final videoStream in video.videoStreams!
-              .where((p0) => p0.videoOnly ?? false)
-              .toList())
+          if (video.videoStreams != null)
+            for (final videoStream in video.videoStreams!
+                .where((p0) => 
+                    (p0.videoOnly ?? false) && 
+                    p0.url != null &&
+                    // Filter out streams that contain audio codecs (not true video-only)
+                    !(p0.codec?.contains('mp4a') ?? false) &&
+                    !(p0.codec?.contains('opus') ?? false))
+                .toList())
             DownloadQualityTile(
               stream: StreamData.fromStream(stream: videoStream),
               video: video,
@@ -264,21 +278,30 @@ class DownloadQualityTile extends HookConsumerWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onTap: () async {
-          if ((Platform.isAndroid || Platform.isIOS) &&
-                  !await Permission.storage.request().isGranted ||
-              !await Permission.accessMediaLocation.request().isGranted &&
-                  !await Permission.manageExternalStorage.request().isGranted) {
-            return;
+          // Skip permission check on desktop (Linux/macOS/Windows)
+          if (Platform.isAndroid || Platform.isIOS) {
+            if (!await Permission.storage.request().isGranted ||
+                !await Permission.accessMediaLocation.request().isGranted &&
+                    !await Permission.manageExternalStorage.request().isGranted) {
+              return;
+            }
           }
+          
+          // Close popup first
           if (context.mounted) {
-            onClose != null ? onClose!() : context.back();
+            onClose?.call();
+          }
+          
+          // Capture values before potential disposal
+          final downloadPath = ref.read(downloadPathProvider).path;
 
+          if (context.mounted) {
             await ref.read(downloadListProvider.notifier).addDownload(
                   context,
                   DownloadItem.fromVideo(
                     video: video,
                     stream: stream,
-                    path: ref.watch(downloadPathProvider).path,
+                    path: downloadPath,
                   ),
                 );
           }
