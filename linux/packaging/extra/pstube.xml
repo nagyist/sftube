@@ -12,13 +12,15 @@
 	</recommends>
 	<developer_name>Prateek Sunal</developer_name>
 	<url type="homepage">https://github.com/prateekmedia/pstube</url>
+	<url type="bugtracker">https://github.com/prateekmedia/pstube/issues</url>
+	<url type="vcs-browser">https://github.com/prateekmedia/pstube</url>
 	<description>
 		<p>Ever wondered how the videos in the internet will look without ads, no more wondering just use PsTube.</p>
 		<p>Features:</p>
 		<ul>
-	p		<li>Beautiful user interface</li>
+			<li>Beautiful user interface</li>
 			<li>Lightweight and fast</li>
-            <li>No Login Required</li>
+			<li>No Login Required</li>
 			<li>Keep your liked videos and comments</li>
 			<li>Playlists support</li>
 			<li>Download videos, audios and thumbnails</li>
@@ -31,9 +33,13 @@
 		</ul>
 	</description>
 	<screenshots>
-		<screenshot>
++		<screenshot type="default">
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/home-desktop.jpg?raw=true</image>
+		</screenshot>
++		<screenshot type="default">
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/search-desktop.jpg?raw=true</image>
+		</screenshot>
++		<screenshot type="default">
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/video-desktop.jpg?raw=true</image>
 		</screenshot>
 	</screenshots>
@@ -47,6 +53,6 @@
 		<release version="0.4.5" date="2021-09-28"/>
 		<release version="0.4.0" date="2021-09-28"/>
 	</releases>
-	<content_rating type="oars-1.0" />
+	<content_rating type="oars-1.1" />
 	<update_contact>pankajsunal123@gmail.com</update_contact>
 </component>
