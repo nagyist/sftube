@@ -5,5 +5,7 @@ display_name: PsTube
 create_desktop_icon: false
 install_dir_name: "{autopf}\\PsTube"
 setup_icon_file: ../../windows/runner/resources/app_icon.ico
+wizard_image_file: ../../windows/runner/resources/app_icon.ico
+wizard_small_image_file: ../../windows/runner/resources/app_icon.ico
 locales:
   - en
