@@ -33,13 +33,13 @@
 		</ul>
 	</description>
 	<screenshots>
-+		<screenshot type="default">
+		<screenshot type="default">
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/home-desktop.jpg?raw=true</image>
 		</screenshot>
-+		<screenshot type="default">
+		<screenshot>
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/search-desktop.jpg?raw=true</image>
 		</screenshot>
-+		<screenshot type="default">
+		<screenshot>
 			<image type="source">https://github.com/prateekmedia/pstube/blob/2.0.0/assets/screenshots/video-desktop.jpg?raw=true</image>
 		</screenshot>
 	</screenshots>
